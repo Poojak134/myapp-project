@@ -16,14 +16,11 @@ spec:
     spec:
       containers:
       - name: my-webapp
-        image: IMAGE_PLACEHOLDER
+        image: 686584420811.dkr.ecr.ap-south-1.amazonaws.com/my-webapp:9
         imagePullPolicy: Always
+        command: ["catalina.sh", "run"]  # This overrides the broken command
         ports:
         - containerPort: 8080
-          name: http
-        env:
-        - name: JAVA_OPTS
-          value: "-Xms256m -Xmx512m"
         resources:
           requests:
             memory: "256Mi"
@@ -31,19 +28,5 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health  # Change to your app's health endpoint
-            port: 8080
-          initialDelaySeconds: 90
-          periodSeconds: 30
-          failureThreshold: 5
-        readinessProbe:
-          httpGet:
-            path: /health  # Change to your app's readiness endpoint
-            port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 10
-          failureThreshold: 3
       imagePullSecrets:
       - name: ecr-secret
