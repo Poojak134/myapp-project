@@ -17,25 +17,22 @@ pipeline {
 
   stages {
 
-    // ─── STAGE 1: Code Checkout ───
     stage('1. Checkout') {
       steps {
         git branch: 'master',
           credentialsId: 'github-credentials',
           url: 'https://github.com/Poojak134/myapp-project.git'
-        echo 'Code GitHub se fetch ho gaya!'
+        echo 'Code fetched successfully!'
       }
     }
 
-    // ─── STAGE 2: Maven Build ───
     stage('2. Maven Build') {
       steps {
         sh 'mvn clean package -DskipTests'
-        echo 'WAR file build ho gaya: target/my-webapp.war'
+        echo 'WAR file built: target/my-webapp.war'
       }
     }
 
-    // ─── STAGE 3: Unit Tests ───
     stage('3. Unit Tests') {
       steps {
         sh 'mvn test'
@@ -47,15 +44,13 @@ pipeline {
       }
     }
 
-    // ─── STAGE 4: Docker Build ───
     stage('4. Docker Build') {
       steps {
         sh "docker build -t ${IMAGE_TAG} -t ${LATEST_TAG} ."
-        echo 'Docker image build ho gaya!'
+        echo 'Docker image built!'
       }
     }
 
-    // ─── STAGE 5: ECR Push ───
     stage('5. Push to ECR') {
       steps {
         withAWS(credentials: "${AWS_CREDENTIALS}", region: "${AWS_REGION}") {
@@ -65,42 +60,67 @@ pipeline {
           '''
           sh "docker push ${IMAGE_TAG}"
           sh "docker push ${LATEST_TAG}"
-          echo 'Image ECR mein push ho gayi!'
+          echo 'Image pushed to ECR!'
         }
       }
     }
 
-    // ─── STAGE 6: Kubernetes Deploy ───
     stage('6. Deploy to Kubernetes') {
       steps {
         withAWS(credentials: "${AWS_CREDENTIALS}", region: "${AWS_REGION}") {
-          sh "aws eks update-kubeconfig --region ${AWS_REGION} --name ${K8S_CLUSTER}"
-
-          // Image tag update karo
-          sh "sed -i 's|IMAGE_PLACEHOLDER|${IMAGE_TAG}|g' k8s/deployment.yaml"
-
-          // Apply Kubernetes manifests
-          sh 'kubectl apply -f k8s/deployment.yaml'
-          sh 'kubectl apply -f k8s/service.yaml'
-
-          // Rollout wait karo
-          sh 'kubectl rollout status deployment/my-webapp --timeout=300s'
-          echo 'App Kubernetes mein deploy ho gayi!'
+          sh """
+            # Update kubeconfig
+            aws eks update-kubeconfig --region ${AWS_REGION} --name ${K8S_CLUSTER}
+            
+            # Create/update ECR secret for image pull
+            kubectl get secret ecr-secret || \
+            aws ecr get-login-password --region ${AWS_REGION} | \
+            kubectl create secret docker-registry ecr-secret \
+              --docker-server=${ECR_REGISTRY} \
+              --docker-username=AWS \
+              --docker-password-stdin
+            
+            # Update image in deployment
+            sed -i 's|IMAGE_PLACEHOLDER|${IMAGE_TAG}|g' k8s/deployment.yaml
+            
+            # Validate YAML before applying
+            kubectl apply -f k8s/deployment.yaml --dry-run=client || exit 1
+            
+            # Apply manifests
+            kubectl apply -f k8s/deployment.yaml
+            kubectl apply -f k8s/service.yaml
+            
+            # Wait for rollout with diagnostics
+            kubectl rollout status deployment/my-webapp --timeout=300s || {
+              echo "=== Deployment Failed - Gathering Diagnostics ==="
+              kubectl get pods
+              kubectl describe pods -l app=my-webapp
+              kubectl logs -l app=my-webapp --tail=50 || true
+              kubectl logs -l app=my-webapp --previous --tail=50 || true
+              exit 1
+            }
+            
+            echo 'App deployed to Kubernetes!'
+          """
         }
       }
     }
 
-    // ─── STAGE 7: Verify Deployment ───
-    stage('7. Verify') {
+    stage('7. Verify Deployment') {
       steps {
         withAWS(credentials: "${AWS_CREDENTIALS}", region: "${AWS_REGION}") {
-          sh 'kubectl get pods -l app=my-webapp'
-          sh 'kubectl get service my-webapp-service'
-          echo 'Deployment successful! App live hai.'
+          sh """
+            echo "=== Pods ==="
+            kubectl get pods -l app=my-webapp
+            echo "=== Services ==="
+            kubectl get service
+            echo "=== Deployment Status ==="
+            kubectl get deployment my-webapp
+          """
+          echo 'Deployment successful! App is live.'
         }
       }
     }
-
   }
 
   post {
@@ -111,9 +131,10 @@ pipeline {
       echo 'Pipeline Failed! Check logs above.'
     }
     always {
-      // Local Docker images clean karo
-      sh "docker rmi ${IMAGE_TAG} || true"
-      sh "docker rmi ${LATEST_TAG} || true"
+      script {
+        sh "docker rmi ${IMAGE_TAG} || true"
+        sh "docker rmi ${LATEST_TAG} || true"
+      }
     }
   }
 }
