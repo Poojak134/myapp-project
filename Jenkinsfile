@@ -7,7 +7,7 @@ pipeline {
     ECR_REPO         = 'my-webapp'
     IMAGE_TAG        = "${ECR_REGISTRY}/${ECR_REPO}:${BUILD_NUMBER}"
     LATEST_TAG       = "${ECR_REGISTRY}/${ECR_REPO}:latest"
-    K8S_CLUSTER      = 'webapp-cluster'
+    K8S_CLUSTER      = 'my-webapp-cluster'
     AWS_CREDENTIALS  = 'aws-credentials'
   }
 
