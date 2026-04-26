@@ -16,11 +16,11 @@ spec:
     spec:
       containers:
       - name: my-webapp
-        image: 686584420811.dkr.ecr.ap-south-1.amazonaws.com/my-webapp
+        image: 686584420811.dkr.ecr.ap-south-1.amazonaws.com/my-webapp:5
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
-        imagePullSecrets:
-      - name: ecr-secret
+          name: http
         resources:
           requests:
             memory: '256Mi'
@@ -34,3 +34,11 @@ spec:
             port: 8080
           initialDelaySeconds: 60
           periodSeconds: 30
+        readinessProbe:  # Added for better deployment flow
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      imagePullSecrets:
+      - name: ecr-secret
