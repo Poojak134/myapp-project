@@ -22,7 +22,7 @@ pipeline {
       steps {
         git branch: 'master',
           credentialsId: 'github-credentials',
-          url: 'https://github.com/YOUR_USERNAME/my-webapp.git'
+          url: 'https://github.com/Poojak134/myapp-project.git'
         echo 'Code GitHub se fetch ho gaya!'
       }
     }
