@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: my-webapp
-        image: 686584420811.dkr.ecr.ap-south-1.amazonaws.com/my-webapp:9
+        image: 686584420811.dkr.ecr.ap-south-1.amazonaws.com/my-webapp:BUILD_NUMBER
         imagePullPolicy: Always
         command: ["catalina.sh", "run"]  # This overrides the broken command
         ports:
