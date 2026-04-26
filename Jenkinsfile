@@ -20,7 +20,7 @@ pipeline {
     // ─── STAGE 1: Code Checkout ───
     stage('1. Checkout') {
       steps {
-        git branch: 'main',
+        git branch: 'master',
           credentialsId: 'github-credentials',
           url: 'https://github.com/YOUR_USERNAME/my-webapp.git'
         echo 'Code GitHub se fetch ho gaya!'
