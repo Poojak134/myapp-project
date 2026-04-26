@@ -16,29 +16,34 @@ spec:
     spec:
       containers:
       - name: my-webapp
-        image: 686584420811.dkr.ecr.ap-south-1.amazonaws.com/my-webapp:5
+        image: IMAGE_PLACEHOLDER
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms256m -Xmx512m"
         resources:
           requests:
-            memory: '256Mi'
-            cpu: '250m'
+            memory: "256Mi"
+            cpu: "250m"
           limits:
-            memory: '512Mi'
-            cpu: '500m'
+            memory: "512Mi"
+            cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /
+            path: /health  # Change to your app's health endpoint
+            port: 8080
+          initialDelaySeconds: 90
+          periodSeconds: 30
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /health  # Change to your app's readiness endpoint
             port: 8080
           initialDelaySeconds: 60
-          periodSeconds: 30
-        readinessProbe:  # Added for better deployment flow
-          httpGet:
-            path: /
-            port: 8080
-          initialDelaySeconds: 30
           periodSeconds: 10
+          failureThreshold: 3
       imagePullSecrets:
       - name: ecr-secret
