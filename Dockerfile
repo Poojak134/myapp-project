@@ -10,4 +10,4 @@ COPY target/java17-mysql-webapp-1.0.war /usr/local/tomcat/webapps/ROOT.war
 EXPOSE 8080
 
 # Tomcat start karo
-CMD ['catalina.sh', 'run']
+CMD ["catalina.sh", "run"]
